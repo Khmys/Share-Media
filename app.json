@@ -2,6 +2,7 @@
 {
   "name": "TG File Sharing Bot",
   "description": "file sharing bot store posts and it can access by special links",
+  "logo": "https://telegra.ph/file/f2282d4b58f8172a9d241.jpg",
   "keywords": [
     "telegram",
     "file",

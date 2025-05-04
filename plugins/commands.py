@@ -1,18 +1,18 @@
 import asyncio
 import base64
-from pyrogram import Client, filters, version
+from pyrogram import Client, filters, __version__ as pyrogram_version
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import FloodWait
 
 from bot import Bot
 from config import CHANNEL_ID, ADMINS, START_MSG, OWNER_ID
 
-# 1. Kituo cha kuanzia (start command)
+# 1. Start command
 @Bot.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
     text = message.text
-    
-    # Kama kuna parameter za mwisho (kwa mfano: /start encoded_string)
+
+    # Handle start parameter (e.g. /start encoded_string)
     if len(text) > 7:
         try:
             base64_string = text.split(" ", 1)[1]
@@ -22,10 +22,10 @@ async def start_command(client: Client, message: Message):
             return
 
         try:
-            if len(argument) == 3:  # Kama ni range ya ujumbe (mfano: get-123-130)
+            if len(argument) == 3:  # Batch of messages
                 start, end = int(argument[1]), int(argument[2])
                 ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
-            elif len(argument) == 2:  # Kama ni ujumbe mmoja (mfano: get-123)
+            elif len(argument) == 2:  # Single message
                 ids = [int(argument[1])]
             else:
                 return
@@ -49,7 +49,7 @@ async def start_command(client: Client, message: Message):
                 pass
         return
 
-    # Kama hakuna parameter, onyesha menyu ya kawaida
+    # Show normal menu
     reply_markup = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("😊 Kuhusu Mimi", callback_data="about"),
@@ -64,17 +64,17 @@ async def start_command(client: Client, message: Message):
         parse_mode="HTML"
     )
 
-# 2. Kituo cha kushughulikia vitufe (buttons)
+# 2. Callback button handler
 @Bot.on_callback_query()
 async def cb_handler(client: Bot, query: CallbackQuery):
     data = query.data
-    
+
     if data == "about":
         await query.message.edit_text(
             text=(
                 f"○ Mwenye: Huyu Mtu\n"
                 f"○ Lugha: Python3\n"
-                f"○ Maktaba: Pyrogram asyncio {version}\n"
+                f"○ Maktaba: Pyrogram asyncio {pyrogram_version}\n"
                 f"○ Chanzo: Bonyeza hapa\n"
                 f"○ Kituo: @CodeXBotz\n"
                 f"○ Kikundi cha Usaidizi: @CodeXBotzSupport"
@@ -92,11 +92,11 @@ async def cb_handler(client: Bot, query: CallbackQuery):
         except:
             pass
 
-# 3. Kituo cha kutuma ujumbe kwenye channel
+# 3. Post to channel
 @Bot.on_message(filters.private & filters.user(ADMINS) & ~filters.command(["start", "batch"]))
 async def channel_post(client: Client, message: Message):
     reply_text = await message.reply_text("Subiri kidogo...!", quote=True)
-    
+
     try:
         post_message = await message.copy(chat_id=CHANNEL_ID, disable_notification=True)
     except FloodWait as e:
@@ -108,11 +108,11 @@ async def channel_post(client: Client, message: Message):
 
     encoded = base64.b64encode(f"get-{post_message.message_id}".encode("ascii")).decode("ascii")
     link = f"https://t.me/{client.username}?start={encoded}"
-    
+
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔁 Shiriki URL", url=f'https://telegram.me/share/url?url={link}')]
     ])
-    
+
     await reply_text.edit(
         f"<b>Hapa kuna kiungo chako</b>\n\n{link}",
         parse_mode="HTML",
@@ -120,7 +120,7 @@ async def channel_post(client: Client, message: Message):
         disable_web_page_preview=True
     )
 
-# 4. Kituo cha kutengeneza kiungo cha ujumbe mbalimbali (batch)
+# 4. Batch command
 @Bot.on_message(filters.private & filters.user(ADMINS) & filters.command("batch"))
 async def batch(client: Client, message: Message):
     async def ask_forward(text_prompt):
@@ -141,18 +141,18 @@ async def batch(client: Client, message: Message):
     f_msg_id = await ask_forward("Tuma Ujumbe wa Kwanza kutoka Channel (kwa quotes)..")
     if not f_msg_id:
         return
-        
+
     s_msg_id = await ask_forward("Tuma Ujumbe wa Mwisho kutoka Channel (kwa quotes)..")
     if not s_msg_id:
         return
 
     encoded = base64.b64encode(f"get-{f_msg_id}-{s_msg_id}".encode("ascii")).decode("ascii")
     link = f"https://t.me/{client.username}?start={encoded}"
-    
+
     reply_markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔁 Shiriki URL", url=f'https://telegram.me/share/url?url={link}')]
     ])
-    
+
     await message.reply_text(
         f"<b>Hapa kuna kiungo chako</b>\n\n{link}",
         quote=True,
